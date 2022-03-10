@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Folder Watcher</title>
+    <link href="./bootstrap.min.css" rel="stylesheet" />
+    <link href="./index.css" rel="stylesheet" />
+    <link href="./app.js" rel="script" />
+  </head>
+  <body>
+    <div class="container-sm">
+      <div class="card text-center watcherCard">
+        <div class="card-header">Watcher Form</div>
+        <div class="card-body">
+          <form id="watcherForm">
+            <div class="form-floating mb-3">
+              <input
+                type="text"
+                class="form-control"
+                id="folderPath"
+                placeholder="path"
+                data-id="watch"
+                required
+                autocomplete="off"
+              />
+              <label for="path">Folder Path</label>
+            </div>
+            <div class="form-floating mb-3">
+              <input
+                type="text"
+                class="form-control"
+                id="message"
+                placeholder="message"
+                data-id="watch"
+                required
+                autocomplete="off"
+              />
+              <label for="message">Message</label>
+            </div>
+            <button type="submit" class="btn btn-primary watchBtn">
+              Watch
+            </button>
+            <button type="reset" class="btn btn-primary resetBtn">Reset</button>
+          </form>
+        </div>
+      </div>
+      <br />
+      <br />
+      <div id="folders"></div>
+    </div>
+
+    <div id="alert" class="alert alert-warning" role="alert"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
