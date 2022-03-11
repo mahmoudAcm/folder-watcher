@@ -83,11 +83,10 @@ function remove(idx) {
 function bootstrap() {
   folders.innerHTML = '';
   foldersList.forEach(({ folderPath }, idx) => {
-    folders.innerHTML =
-      `      
+    folders.innerHTML += `      
       <div class="card mt-3" id="${idx + 1}">
         <div class="card-header"><div class="float-left folderPath">${folderPath}</div><div class="float-right folderPathBtn">
         <button type="button" class="btn btn-danger" onclick="remove(${idx})">Remove</button></div></div>
-      </div>` + folders.innerHTML;
+      </div>`;
   });
 }
