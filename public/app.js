@@ -36,8 +36,8 @@ watcherForm.addEventListener('submit', async (event) => {
     body: JSON.stringify(watcherState),
   }).then((res) => res.json());
 
-  if (res.type === 'success' && !foldersList.includes(watcherState)) {
-    foldersList = [watcherState, ...foldersList];
+  if (res.type === 'success') {
+    foldersList = res.payload;
     bootstrap();
     showAlert(res.type, res.message);
     return;

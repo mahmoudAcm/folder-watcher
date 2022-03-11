@@ -44,7 +44,11 @@ router.post('/watch', (req, res) => {
     oldFolderPaths = oldFolderPaths.filter((path) => folderPath !== path);
   });
 
-  res.json({ type: 'success', message: 'folder watched successfuly.' });
+  res.json({
+    type: 'success',
+    message: 'folder watched successfuly.',
+    payload: watcher.watchedFolders,
+  });
 });
 
 export default router;
