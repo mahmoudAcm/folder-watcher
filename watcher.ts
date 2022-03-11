@@ -7,6 +7,7 @@ import File from './File';
 interface Watcher {
   folderPath: string;
   message: string;
+  createdAt: Date;
   watcher: ReturnType<typeof chokidar.watch>;
 }
 
@@ -56,21 +57,24 @@ class WatcherCenter {
 
     if (this.includes(folderPath)) this.get(folderPath)!;
 
-    this.watchers = [
-      {
-        folderPath,
-        message,
-        watcher,
-      },
-      ...this.watchers,
-    ];
+    const __watcher = {
+      folderPath,
+      message,
+      watcher,
+      createdAt: new Date(),
+    };
+
+    this.watchers = [__watcher, ...this.watchers];
 
     let watchedFolders: Omit<Watcher, 'watcher'>[] = JSON.parse(
       this.file.content,
     ).db;
 
     if (!watchedFolders.some((folder) => folder.folderPath === folderPath)) {
-      watchedFolders = [{ folderPath, message }, ...watchedFolders];
+      watchedFolders = [
+        { folderPath, message, createdAt: __watcher.createdAt },
+        ...watchedFolders,
+      ];
       this.file.content = JSON.stringify({ db: watchedFolders });
     }
 
@@ -106,7 +110,7 @@ class WatcherCenter {
   }
 
   get watchedFolders() {
-    return this.watchers.map((watcher) => ({ folderPath: watcher.folderPath }));
+    return this.watchers.map(({ watcher, ...__watcher }) => __watcher);
   }
 }
 

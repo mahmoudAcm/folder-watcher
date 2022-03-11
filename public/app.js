@@ -85,13 +85,28 @@ function remove(idx) {
   })();
 }
 
+/**
+ * @param { { folderPath: string, idx: number, createdAt: Date } } args
+ * @returns card component
+ */
+function folder({ folderPath, createdAt, idx }) {
+  return `
+    <div class="card mt-3" id="${idx + 1}">
+      <div class="card-header">
+        <div class="float-left folderPath">${folderPath}</div>
+        <div class="float-right folderPathBtn">
+          <button type="button" class="btn btn-danger" onclick="remove(${idx})">X</button>
+        </div>
+      </div>
+      <div class="card-body text-center text-muted" title="Creation Time" dir="rtl">${new Date(
+        createdAt,
+      ).toLocaleString('ar')}</div>
+    </div>`;
+}
+
 function bootstrap() {
   folders.innerHTML = '';
-  foldersList.forEach(({ folderPath }, idx) => {
-    folders.innerHTML += `      
-      <div class="card mt-3" id="${idx + 1}">
-        <div class="card-header"><div class="float-left folderPath">${folderPath}</div><div class="float-right folderPathBtn">
-        <button type="button" class="btn btn-danger" onclick="remove(${idx})">X</button></div></div>
-      </div>`;
+  foldersList.forEach((folderItem, idx) => {
+    folders.innerHTML += folder({ idx, ...folderItem });
   });
 }
