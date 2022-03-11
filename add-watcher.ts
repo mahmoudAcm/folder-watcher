@@ -40,7 +40,7 @@ router.post('/watch', (req, res) => {
     }
   });
 
-  createdWatcher.on('unlink', async (folderPath) => {
+  createdWatcher.on('unlinkDir', async (folderPath) => {
     oldFolderPaths = oldFolderPaths.filter((path) => folderPath !== path);
   });
 
