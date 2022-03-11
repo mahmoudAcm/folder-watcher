@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import chokidar from 'chokidar';
 import Notifier from 'node-notifier';
+import File from './File';
 
 interface Watcher {
   folderPath: string;
@@ -11,19 +12,17 @@ interface Watcher {
 
 class WatcherCenter {
   private watchers: Array<Watcher>;
+  private file: File;
+
   constructor() {
     this.watchers = [];
     const dbPath = path.join(__dirname, 'watchedFolders.json');
-    if (!fs.existsSync(dbPath)) {
-      fs.writeFileSync(dbPath, JSON.stringify({ db: [] }));
-    }
+    this.file = new File(dbPath);
   }
 
   start() {
-    this.watchers = [];
-    const dbPath = path.join(__dirname, 'watchedFolders.json');
     const watchedFolders: Omit<Watcher, 'watcher'>[] = JSON.parse(
-      fs.readFileSync(dbPath).toString(),
+      this.file.content,
     ).db;
 
     watchedFolders.forEach((folder) => {
@@ -50,12 +49,12 @@ class WatcherCenter {
   }
 
   add(folderPath: string, message: string) {
-    const watcher =
-      this.get(folderPath) ||
-      chokidar.watch(folderPath, {
-        persistent: true,
-        depth: 0,
-      });
+    const watcher = chokidar.watch(folderPath, {
+      persistent: true,
+      depth: 0,
+    });
+
+    if (this.includes(folderPath)) this.get(folderPath)!;
 
     this.watchers = [
       {
@@ -66,13 +65,14 @@ class WatcherCenter {
       ...this.watchers,
     ];
 
-    const dbPath = path.join(__dirname, 'watchedFolders.json');
     let watchedFolders: Omit<Watcher, 'watcher'>[] = JSON.parse(
-      fs.readFileSync(dbPath).toString(),
+      this.file.content,
     ).db;
 
-    watchedFolders = [{ folderPath, message }, ...watchedFolders];
-    fs.writeFileSync(dbPath, JSON.stringify({ db: watchedFolders }));
+    if (!watchedFolders.some((folder) => folder.folderPath === folderPath)) {
+      watchedFolders = [{ folderPath, message }, ...watchedFolders];
+      this.file.content = JSON.stringify({ db: watchedFolders });
+    }
 
     return watcher;
   }
@@ -85,15 +85,14 @@ class WatcherCenter {
         (watcher) => watcher.folderPath !== folderPath,
       );
 
-      const dbPath = path.join(__dirname, 'watchedFolders.json');
       let watchedFolders: Omit<Watcher, 'watcher'>[] = JSON.parse(
-        fs.readFileSync(dbPath).toString(),
+        this.file.content,
       ).db;
 
       watchedFolders = watchedFolders.filter(
         (folder) => folder.folderPath !== folderPath,
       );
-      fs.writeFileSync(dbPath, JSON.stringify({ db: watchedFolders }));
+      this.file.content = JSON.stringify({ db: watchedFolders });
     }
   }
 

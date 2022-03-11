@@ -1,5 +1,4 @@
 import express from 'express';
-import * as fs from 'fs';
 import * as path from 'path';
 import fp from 'find-free-port';
 
