@@ -91,7 +91,7 @@ function bootstrap() {
     folders.innerHTML += `      
       <div class="card mt-3" id="${idx + 1}">
         <div class="card-header"><div class="float-left folderPath">${folderPath}</div><div class="float-right folderPathBtn">
-        <button type="button" class="btn btn-danger" onclick="remove(${idx})">Remove</button></div></div>
+        <button type="button" class="btn btn-danger" onclick="remove(${idx})">X</button></div></div>
       </div>`;
   });
 }
