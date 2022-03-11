@@ -7,6 +7,11 @@ let foldersList = [];
 const watcherState = {};
 let alertTimeout = null;
 
+/**
+ * @param {'success' | 'warning' | 'danger'} type the alert color
+ * @param {string} message the alert feedback shown to the user
+ * @param {number} timeout timeout of hidding the alert
+ */
 function showAlert(type, message, timeout) {
   if (alertTimeout !== null) clearTimeout(alertTimeout);
 
