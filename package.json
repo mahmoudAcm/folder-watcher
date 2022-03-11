@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index",
-    "dev": "tsc --watch | nodemon index",
+    "start": "node ./build/index",
+    "dev": "tsc --watch | nodemon ./build/index",
     "build": "tsc"
   },
   "keywords": [],
