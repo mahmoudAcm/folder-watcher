@@ -23,7 +23,6 @@
   flex: 1;
 }
 
-
 #alert {
   position: fixed;
   top: 10px;
@@ -31,4 +30,10 @@
   left: 50%;
   display: none;
   text-transform: capitalize;
+}
+
+.openFolderOption {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
 }

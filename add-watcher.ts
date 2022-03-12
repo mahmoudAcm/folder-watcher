@@ -7,7 +7,7 @@ import Notifier from 'node-notifier';
 const router = Router();
 
 router.post('/watch', (req, res) => {
-  const { folderPath, message } = req.body;
+  const { folderPath, message, options } = req.body;
   if (watcher.includes(folderPath)) {
     res.json({
       type: 'warning',
@@ -28,14 +28,25 @@ router.post('/watch', (req, res) => {
     .readdirSync(folderPath)
     .map((dir) => path.join(folderPath, dir));
 
-  const createdWatcher = watcher.add(folderPath, message);
+  const createdWatcher = watcher.add(folderPath, message, options);
 
   createdWatcher.on('addDir', async (folderPath) => {
     if (!oldFolderPaths.includes(folderPath)) {
-      Notifier.notify({
-        message: message,
-        title: folderPath.split('\\').reverse()[0],
-      });
+      Notifier.notify(
+        {
+          message: message,
+          title: folderPath.split('\\').reverse()[0],
+        },
+        (...args: unknown[]) => {
+          const __array = folderPath.split('\\');
+          const parentFolder = __array.slice(0, __array.length - 1).join('\\');
+
+          const options = watcher.getOptions(parentFolder);
+          if (options.openFolder && folderPath.includes(parentFolder)) {
+            require('child_process').exec(`start "" "${folderPath}"`);
+          }
+        },
+      );
       oldFolderPaths.push(folderPath);
     }
   });

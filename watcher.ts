@@ -4,21 +4,37 @@ import chokidar from 'chokidar';
 import Notifier from 'node-notifier';
 import File from './File';
 
+interface Options {
+  parentFolder: string;
+  openFolder: boolean;
+}
+
 interface Watcher {
   folderPath: string;
   message: string;
   createdAt: Date;
+  options: Options;
   watcher: ReturnType<typeof chokidar.watch>;
 }
 
 class WatcherCenter {
-  private watchers: Array<Watcher>;
+  private watchers: Array<Omit<Watcher, 'options'>>;
   private file: File;
+  private optionsMap: Map<string, Options>;
 
   constructor() {
     this.watchers = [];
     const dbPath = path.join(__dirname, 'watchedFolders.json');
     this.file = new File(dbPath);
+
+    this.optionsMap = new Map();
+    const __db: Array<Omit<Watcher, 'watcher'>> = JSON.parse(
+      this.file.content,
+    ).db;
+
+    __db.forEach(({ options, folderPath }) => {
+      this.addOptions(folderPath, options);
+    });
   }
 
   start() {
@@ -27,7 +43,11 @@ class WatcherCenter {
     ).db;
 
     watchedFolders.forEach((folder) => {
-      const createdWatcher = this.add(folder.folderPath, folder.message);
+      const createdWatcher = this.add(
+        folder.folderPath,
+        folder.message,
+        folder.options,
+      );
 
       let oldFolderPaths = fs
         .readdirSync(folder.folderPath)
@@ -35,10 +55,23 @@ class WatcherCenter {
 
       createdWatcher.on('addDir', async (folderPath) => {
         if (!oldFolderPaths.includes(folderPath)) {
-          Notifier.notify({
-            message: folder.message,
-            title: folderPath.split('\\').reverse()[0],
-          });
+          Notifier.notify(
+            {
+              message: folder.message,
+              title: folderPath.split('\\').reverse()[0],
+            },
+            (...args: unknown[]) => {
+              const __array = folderPath.split('\\');
+              const parentFolder = __array
+                .slice(0, __array.length - 1)
+                .join('\\');
+
+              const options = this.getOptions(parentFolder);
+              if (options.openFolder && folderPath.includes(parentFolder)) {
+                require('child_process').exec(`start "" "${folderPath}"`);
+              }
+            },
+          );
           oldFolderPaths.push(folderPath);
         }
       });
@@ -49,7 +82,24 @@ class WatcherCenter {
     });
   }
 
-  add(folderPath: string, message: string) {
+  addOptions(folderPath: string, options: Options) {
+    this.optionsMap.set(folderPath, { ...options, parentFolder: folderPath });
+  }
+
+  removeOptions(folderPath: string) {
+    this.optionsMap.delete(folderPath);
+  }
+
+  getOptions(folderPath: string) {
+    return (
+      this.optionsMap.get(folderPath) || {
+        openFolder: false,
+        parentFolder: '',
+      }
+    );
+  }
+
+  add(folderPath: string, message: string, options: Options) {
     const watcher = chokidar.watch(folderPath, {
       persistent: true,
       depth: 0,
@@ -71,8 +121,14 @@ class WatcherCenter {
     ).db;
 
     if (!watchedFolders.some((folder) => folder.folderPath === folderPath)) {
+      this.addOptions(folderPath, options);
       watchedFolders = [
-        { folderPath, message, createdAt: __watcher.createdAt },
+        {
+          folderPath,
+          message,
+          createdAt: __watcher.createdAt,
+          options: { ...options, parentFolder: folderPath },
+        },
         ...watchedFolders,
       ];
       this.file.content = JSON.stringify({ db: watchedFolders });
@@ -83,6 +139,8 @@ class WatcherCenter {
 
   remove(folderPath: string) {
     const watcher = this.get(folderPath);
+    this.removeOptions(folderPath);
+
     if (watcher) {
       watcher.unwatch(folderPath);
       this.watchers = this.watchers.filter(

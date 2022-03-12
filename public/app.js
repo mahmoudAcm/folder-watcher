@@ -1,10 +1,11 @@
 console.log('connected');
 const watcherInputs = document.querySelectorAll('[data-id]');
+const optionsInputs = document.querySelectorAll('[data-type="options"]');
 const watcherForm = document.querySelector('#watcherForm');
 const folders = document.querySelector('#folders');
 const alert = document.querySelector('#alert');
 let foldersList = [];
-const watcherState = {};
+const watcherState = { options: {} };
 let alertTimeout = null;
 
 /**
@@ -31,8 +32,15 @@ watcherInputs.forEach((input) => {
   });
 });
 
+optionsInputs.forEach((input) => {
+  input.addEventListener('change', (event) => {
+    watcherState['options'][event.target.id] = event.target.checked;
+  });
+});
+
 watcherForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  console.log(watcherState);
   const res = await fetch('/watch', {
     method: 'post',
     headers: {
