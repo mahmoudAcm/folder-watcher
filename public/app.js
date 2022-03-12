@@ -40,7 +40,6 @@ optionsInputs.forEach((input) => {
 
 watcherForm.addEventListener('submit', async (event) => {
   event.preventDefault();
-  console.log(watcherState);
   const res = await fetch('/watch', {
     method: 'post',
     headers: {
