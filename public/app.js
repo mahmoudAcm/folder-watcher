@@ -4,6 +4,7 @@ const optionsInputs = document.querySelectorAll('[data-type="options"]');
 const watcherForm = document.querySelector('#watcherForm');
 const folders = document.querySelector('#folders');
 const alert = document.querySelector('#alert');
+const resetBtn = document.querySelector('#resetBtn');
 let foldersList = [];
 const watcherState = { options: {} };
 let alertTimeout = null;
@@ -38,6 +39,20 @@ optionsInputs.forEach((input) => {
   });
 });
 
+/**
+ * @param  {[] | [event]} args
+ */
+function resetForm(...args) {
+  watcherForm.reset();
+  const keys = Object.keys(watcherState);
+  keys.forEach((key) => {
+    delete watcherState[key];
+  });
+  watcherState.options = {};
+}
+
+resetBtn.addEventListener('click', resetForm);
+
 watcherForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const res = await fetch('/watch', {
@@ -50,6 +65,7 @@ watcherForm.addEventListener('submit', async (event) => {
 
   if (res.type === 'success') {
     foldersList = res.payload;
+    resetForm();
     bootstrap();
     showAlert(res.type, res.message);
     return;
