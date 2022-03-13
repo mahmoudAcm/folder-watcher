@@ -5,7 +5,7 @@
 You'll need [Node.js](https://nodejs.org) installed on your computer in order to build this app.
 
 ```bash
-git https://github.com/mahmoudAcm/folder-watcher.git
+git clone https://github.com/mahmoudAcm/folder-watcher.git
 $ cd folder-watcher
 $ yarn
 ```
