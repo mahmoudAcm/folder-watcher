@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./build/index",
-    "dev": "tsc --watch | nodemon ./build/index",
+    "dev": "tsc --watch | nodemon ./build/index -e js,mjs",
     "build": "tsc"
   },
   "keywords": [],
