@@ -12,13 +12,15 @@
   "author": "mahmoudAcm",
   "license": "ISC",
   "dependencies": {
-    "@types/express": "^4.17.13",
-    "@types/node": "^17.0.21",
-    "@types/node-notifier": "^8.0.2",
     "chokidar": "^3.5.3",
     "express": "^4.17.3",
     "find-free-port": "^2.0.0",
     "node-notifier": "^10.0.1",
     "nodemon": "^2.0.15"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/node": "^17.0.21",
+    "@types/node-notifier": "^8.0.2"
   }
 }
