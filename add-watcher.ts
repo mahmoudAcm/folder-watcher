@@ -2,9 +2,10 @@ import { Router } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import { watcher } from '.';
-import Notifier from 'node-notifier';
+import { WindowsBalloon } from 'node-notifier';
 
 const router = Router();
+const Notifier = new WindowsBalloon();
 
 router.post('/watch', (req, res) => {
   const { folderPath, message, options } = req.body;
@@ -36,13 +37,21 @@ router.post('/watch', (req, res) => {
         {
           message: message,
           title: folderPath.split('\\').reverse()[0],
+          type: 'warn',
+          wait: true,
+          sound: true,
         },
         (...args: unknown[]) => {
+          const actionType = args[1];
           const __array = folderPath.split('\\');
           const parentFolder = __array.slice(0, __array.length - 1).join('\\');
 
           const options = watcher.getOptions(parentFolder);
-          if (options.openFolder && folderPath.includes(parentFolder)) {
+          if (
+            actionType === 'activate' &&
+            options.openFolder &&
+            folderPath.includes(parentFolder)
+          ) {
             require('child_process').exec(`start "" "${folderPath}"`);
           }
         },

@@ -1,8 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import chokidar from 'chokidar';
-import Notifier from 'node-notifier';
+import { WindowsBalloon } from 'node-notifier';
 import File from './File';
+
+const Notifier = new WindowsBalloon();
 
 interface Options {
   parentFolder: string;
@@ -59,15 +61,23 @@ class WatcherCenter {
             {
               message: folder.message,
               title: folderPath.split('\\').reverse()[0],
+              type: 'warn',
+              wait: true,
+              sound: true,
             },
             (...args: unknown[]) => {
+              const actionType = args[1];
               const __array = folderPath.split('\\');
               const parentFolder = __array
                 .slice(0, __array.length - 1)
                 .join('\\');
 
               const options = this.getOptions(parentFolder);
-              if (options.openFolder && folderPath.includes(parentFolder)) {
+              if (
+                actionType === 'activate' &&
+                options.openFolder &&
+                folderPath.includes(parentFolder)
+              ) {
                 require('child_process').exec(`start "" "${folderPath}"`);
               }
             },
