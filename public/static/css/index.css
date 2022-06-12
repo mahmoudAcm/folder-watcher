@@ -1,0 +1,133 @@
+/* body *::selection {
+  background: none !important;
+} */
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.form-date {
+  text-align: center;
+}
+
+.adder {
+  width: 600px;
+  position: fixed;
+  z-index: 1000;
+  right: 10px;
+  top: 60px;
+  display: none !important;
+}
+
+.show-adder {
+  display: block !important;
+}
+
+.row {
+  margin-bottom: 10px;
+}
+
+label::selection {
+  cursor: none;
+  background-color: none;
+}
+
+.watcher-adder {
+  position: fixed;
+  right: 10px;
+  top: 10px;
+}
+
+.watcher-adder span {
+  display: block;
+}
+
+.btn-toggle span {
+  transform: rotate(45deg) !important;
+}
+
+.actions button {
+  box-shadow: none !important;
+  margin-top: 10px;
+  width: 90px;
+}
+
+#alert-stack {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  min-width: 380px;
+  z-index: 1000;
+}
+
+.background {
+  background-color: var(--dark);
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -100;
+}
+
+.slide-right {
+  animation-name: slide-right;
+  animation-duration: 0.7s;
+}
+
+@keyframes slide-right {
+  0% {
+    left: -1000px;
+  }
+
+  100% {
+    left: 5px;
+  }
+}
+
+.bg-danger,
+.bg-success,
+.bg-warning,
+.bg-info {
+  color: white;
+  border: none !important;
+}
+
+.bg-danger .close:hover,
+.bg-success .close:hover,
+.bg-warning .close:hover,
+.bg-info .close:hover {
+  color: white !important;
+}
+
+.folders {
+  width: 100%;
+  margin-top: 150px;
+}
+
+.folders .icon {
+  width: 30px;
+}
+
+.folder-item {
+  margin-top: 30px;
+}
+
+.breadcrumb {
+  padding: 0 !important;
+  margin-bottom: 0 !important;
+  background-color: white !important;
+  border-radius: none !important;
+}
+
+.del-btn {
+  background-color: white;
+}
+
+.next-bg-btn {
+  position: fixed;
+  right: 60px;
+  top: 10px;
+  z-index: 1000;
+}

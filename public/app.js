@@ -1,135 +1,201 @@
-console.log('connected');
-const watcherInputs = document.querySelectorAll('[data-id]');
-const optionsInputs = document.querySelectorAll('[data-type="options"]');
-const watcherForm = document.querySelector('#watcherForm');
-const folders = document.querySelector('#folders');
-const alert = document.querySelector('#alert');
-const resetBtn = document.querySelector('#resetBtn');
-let foldersList = [];
-const watcherState = { options: {} };
-let alertTimeout = null;
+const form = document.querySelector('form');
+const folderPathInput = document.getElementById('folderPath');
+const messageInput = document.getElementById('message');
+const alertStack = document.getElementById('alert-stack');
+const submitBtn = document.getElementById('submit');
+const foldersContainer = document.getElementById('folders');
+const adder = document.getElementById('adder');
+const adderBtn = document.getElementById('adder-btn');
+const currentDate = document.getElementById('current-date');
+const nextBgBtn = document.getElementById('next-bg-btn');
 
-/**
- * @param {'success' | 'warning' | 'danger'} type the alert color
- * @param {string} message the alert feedback shown to the user
- * @param {number} timeout timeout of hidding the alert
- */
-function showAlert(type, message, timeout) {
-  if (alertTimeout !== null) clearTimeout(alertTimeout);
+const backgrounds = [snowConfig, defaultConfig, spaceConfig];
+let interval = null;
 
-  alert.style.display = 'inline';
-
-  alert.textContent = message;
-  alert.setAttribute('class', `alert alert-${type}`);
-
-  alertTimeout = setTimeout(() => {
-    alert.style.display = 'none';
-  }, timeout | 5000);
+function changeBackground() {
+  interval = setInterval(nextBackground, 60 * 5 * 1000);
 }
 
-watcherInputs.forEach((input) => {
-  input.addEventListener('input', (event) => {
-    watcherState[event.target.id] = event.target.value;
+window.onload = function () {
+  currentDate.innerHTML = `Current Date: ${new Date().toDateString()}`;
+  const firstVisit = localStorage.getItem('first_visit');
+  if (!firstVisit || firstVisit !== 'false') {
+    localStorage.setItem('first_visit', 'false');
+    confirm('If unexpected behavior happened please try refreshing the page.');
+  }
+  changeBackground();
+  requestPermission();
+};
+
+socket.on('notification', (payload) => {
+  const notify = new Notification(payload.title, {
+    body: payload.message,
+    image: '/favicon.png',
+    requireInteraction: true,
   });
+
+  notify.onclick = (evt) => {
+    evt.target.close();
+    evt.preventDefault();
+    socket.emit('open', payload.title);
+  };
 });
 
-optionsInputs.forEach((input) => {
-  input.addEventListener('change', (event) => {
-    watcherState['options'][event.target.id] = event.target.checked;
+socket.on('connection', async () => {
+  await requestPermission();
+
+  new Notification('connected to server successfully.', {
+    image: '/favicon.png',
+    requireInteraction: true,
   });
-});
 
-/**
- * @param  {[] | [event]} args
- */
-function resetForm(...args) {
-  watcherForm.reset();
-  const keys = Object.keys(watcherState);
-  keys.forEach((key) => {
-    delete watcherState[key];
-  });
-  watcherState.options = {};
-}
+  alertStack.appendChild(
+    addAlert('success', 'connected to server successfully.'),
+  );
 
-resetBtn.addEventListener('click', resetForm);
-
-watcherForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const res = await fetch('/watch', {
-    method: 'post',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify(watcherState),
-  }).then((res) => res.json());
-
-  if (res.type === 'success') {
-    foldersList = res.payload;
-    resetForm();
-    bootstrap();
-    showAlert(res.type, res.message);
-    return;
+  const array = [];
+  let idx = 0;
+  for (const child of alertStack.children) {
+    if (child.dataset.timeout === 'false') array.push(idx);
+    idx++;
   }
 
-  showAlert(res.type, res.message);
+  while (array.length) {
+    idx = array.pop();
+    alertStack.children[idx].remove();
+  }
+
+  socket.emit('folders');
 });
 
-window.addEventListener('load', async () => {
-  const res = await fetch('/data', {
-    headers: {
-      'content-type': 'application/json',
-    },
-  }).then((res) => res.json());
-  foldersList = res.watchedFolders;
-  bootstrap();
+socket.on('disconnect', () => {
+  new Notification('disconneced, something went wrong.', {
+    image: '/favicon.png',
+    requireInteraction: true,
+  });
+
+  alertStack.appendChild(
+    addAlert('warning', 'disconneced, something went wrong.'),
+  );
 });
 
-function remove(idx) {
-  (async () => {
-    const folderPath = foldersList[idx].folderPath;
-    const res = await fetch('/unwatch', {
-      method: 'delete',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ folderPath }),
-    }).then((res) => res.json());
+socket.on('connect_error', () => {
+  alertStack.appendChild(
+    addAlert('info', 'trying to connect the server, connecting...', false),
+  );
+});
 
-    if (res.type === 'success') {
-      foldersList = foldersList.filter(
-        (folder) => folder.folderPath !== folderPath,
+socket.on('folderOpened', (foldername) => {
+  alertStack.appendChild(
+    addAlert('success', `Folder '${foldername}' is opened successfully.`),
+  );
+});
+
+socket.on('error', (error) => {
+  if ('message' in error) {
+    alertStack.appendChild(addAlert('danger', error.message));
+  }
+  setTimeout(() => {
+    submitBtn.removeAttribute('disabled');
+  }, 500);
+});
+
+socket.on('watched', (folder) => {
+  form.reset();
+  alertStack.appendChild(
+    addAlert('success', `folder '${folder.name}' is watched successfully.`),
+  );
+  setTimeout(() => {
+    submitBtn.removeAttribute('disabled');
+    socket.emit('folders');
+  }, 500);
+});
+
+socket.on('unwatched', (folderPath, folderName) => {
+  for (var folder of foldersContainer.children) {
+    if (folder.dataset.id === folderPath) {
+      console.log('removed');
+      folder.remove();
+      alertStack.appendChild(
+        addAlert('info', `Folder '${folderName}' has been removed.`),
       );
-      bootstrap();
-      showAlert(res.type, res.message);
       return;
     }
+  }
+});
 
-    showAlert(res.type, res.message);
-  })();
-}
+socket.on('folders', (folders) => {
+  foldersContainer.innerHTML = '';
+  for (const folder of folders.reverse()) {
+    foldersContainer.appendChild(
+      addFolderItem(
+        folder.name,
+        new Date(folder.timestamps).toLocaleString('en'),
+        folder.folderPath,
+      ),
+    );
+  }
+});
 
-/**
- * @param { { folderPath: string, idx: number, createdAt: Date } } args
- * @returns card component
- */
-function folder({ folderPath, createdAt, idx }) {
-  return `
-    <div class="card mt-3" id="${idx + 1}">
-      <div class="card-header">
-        <div class="float-left folderPath">${folderPath}</div>
-        <div class="float-right folderPathBtn">
-          <button type="button" class="btn btn-danger" onclick="remove(${idx})">X</button>
-        </div>
-      </div>
-      <div class="card-body text-center text-muted" title="Creation Time" dir="rtl">${new Date(
-        createdAt,
-      ).toLocaleString('ar')}</div>
-    </div>`;
-}
+form.onsubmit = function onSubmit(evt) {
+  evt.preventDefault();
+  const folderPath = folderPathInput.value;
+  const notificationMsg = messageInput.value;
+  let canSend = true;
 
-function bootstrap() {
-  folders.innerHTML = '';
-  foldersList.forEach((folderItem, idx) => {
-    folders.innerHTML += folder({ idx, ...folderItem });
+  if (!folderPath) {
+    canSend = false;
+    setTimeout(() => {
+      alertStack.appendChild(
+        addAlert('danger', 'Please provide a valid folder path.'),
+      );
+    });
+  }
+
+  if (!notificationMsg) {
+    canSend = false;
+    setTimeout(() => {
+      alertStack.appendChild(
+        addAlert('danger', 'Please provide a valid message.'),
+      );
+    }, 250);
+  }
+
+  if (!canSend) return;
+
+  const payload = { folderPath, notificationMsg };
+  socket.emit('watch', payload);
+  submitBtn.setAttribute('disabled', 'true');
+};
+
+let toggle = false;
+adderBtn.addEventListener('click', () => {
+  adder.classList.toggle('show-adder');
+  ['btn-primary', 'btn-danger', 'btn-toggle'].forEach(
+    adderBtn.classList.toggle,
+  );
+
+  folderPathInput.focus({
+    preventScroll: true,
   });
+
+  if (!toggle) {
+    adderBtn.title = 'close the form';
+  } else adderBtn.title = 'add a watcher';
+
+  toggle ^= true;
+});
+
+let currentBgIndex = parseInt(localStorage.getItem('cur_idx') || '0', 10);
+particlesJS('particles', backgrounds[currentBgIndex]);
+
+function nextBackground() {
+  particlesJS('particles', backgrounds[++currentBgIndex % 3]);
+  localStorage.setItem('cur_idx', currentBgIndex % 3);
 }
+
+nextBgBtn.addEventListener('click', () => {
+  if (interval !== null) clearInterval(interval);
+  nextBackground();
+  changeBackground();
+});

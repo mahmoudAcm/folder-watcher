@@ -4,68 +4,91 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.png" />
     <title>Folder Watcher</title>
-    <link href="./bootstrap.min.css" rel="stylesheet" />
-    <link href="./index.css" rel="stylesheet" />
-    <link href="./app.js" rel="script" />
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="/static/css/index.css" rel="stylesheet" />
   </head>
   <body>
-    <div class="container-sm">
-      <div class="card text-center watcherCard">
-        <div class="card-header">Watcher Form</div>
+    <div class="container">
+      <div class="card adder shadow" id="adder">
+        <div class="card-header" id="current-date" class="form-date">
+          {current-date}
+        </div>
         <div class="card-body">
-          <form id="watcherForm">
-            <div class="form-floating mb-3">
-              <input
-                type="text"
-                class="form-control"
-                id="folderPath"
-                placeholder="path"
-                data-id="watch"
-                required
-                autocomplete="off"
-              />
-              <label for="path">Folder Path</label>
-            </div>
-            <div class="form-floating mb-3">
-              <input
-                type="text"
-                class="form-control"
-                id="message"
-                placeholder="message"
-                data-id="watch"
-                required
-                autocomplete="off"
-              />
-              <label for="message">Message</label>
-            </div>
-            <button type="submit" class="btn btn-primary watchBtn">
-              Watch
-            </button>
-            <button type="button" class="btn btn-primary resetBtn" id="resetBtn">Reset</button>
-            <div class="openFolderOption">
-              <div class="form-check">
+          <form novalidate draggable="false">
+            <div class="form-group row">
+              <label for="folderPath" class="col-sm-2 col-form-label"
+                >Path</label
+              >
+              <div class="col-sm-10">
                 <input
-                  class="form-check-input"
-                  type="checkbox"
-                  value=""
-                  id="openFolder"
-                  data-type="options"
+                  type="text"
+                  class="form-control"
+                  id="folderPath"
+                  placeholder="Please paste the folder path here"
+                  autocomplete="off"
+                  required
+                  spellcheck="false"
                 />
-                <label class="form-check-label" for="openFolder">
-                  Open Folder
-                </label>
+              </div>
+            </div>
+            <div class="form-group row">
+              <label for="message" class="col-sm-2 col-form-label"
+                >Message</label
+              >
+              <div class="col-sm-10">
+                <input
+                  type="text"
+                  class="form-control"
+                  id="message"
+                  placeholder="Please type the notification message"
+                  autocomplete="off"
+                  required
+                  spellcheck="false"
+                />
+              </div>
+            </div>
+            <div class="form-group row actions">
+              <div class="col-sm-2">
+                <button type="submit" class="btn btn-info" id="submit">
+                  Watch
+                </button>
               </div>
             </div>
           </form>
         </div>
       </div>
-      <br />
-      <br />
-      <div id="folders"></div>
+      <div id="folders" class="folders list-group"></div>
     </div>
-
-    <div id="alert" class="alert alert-warning" role="alert"></div>
-    <script src="./app.js"></script>
+    <div id="alert-stack"></div>
+    <div class="background" id="particles"></div>
+    <button
+      class="btn btn-primary watcher-adder shadow rounded"
+      title="add a watcher"
+      id="adder-btn"
+    >
+      <span>+</span>
+    </button>
+    <button id="next-bg-btn" class="btn btn-secondary next-bg-btn shadow">
+      Next Background
+    </button>
+    <script
+      src="/static/js/jquery-3.3.1.slim.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script src="/static/js/bootstrap.min.js" crossorigin="anonymous"></script>
+    <script src="/static/js/particles.min.js" crossorigin="anonymous"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      var socket = io();
+    </script>
+    <script src="/static/js/register.js" defer></script>
+    <script src="/static/js/alert.js"></script>
+    <script src="/static/js/configs/default.js"></script>
+    <script src="/static/js/configs/snow.js"></script>
+    <script src="/static/js/configs/space.js"></script>
+    <script src="/static/js/folder-item.js"></script>
+    <script src="/app.js"></script>
   </body>
 </html>

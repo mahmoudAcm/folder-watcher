@@ -6,8 +6,8 @@ You'll need [Node.js](https://nodejs.org) installed on your computer in order to
 
 ```bash
 git clone https://github.com/mahmoudAcm/folder-watcher.git
-$ cd folder-watcher
-$ yarn
+cd folder-watcher
+npm install
 ```
 
 <br>

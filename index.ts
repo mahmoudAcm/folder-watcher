@@ -1,30 +1,35 @@
 import express from 'express';
 import * as path from 'path';
-import fp from 'find-free-port';
+import { isFreePort } from 'find-free-ports';
+import http from 'http';
+import logger from './logger';
 
-import addWatcherRouter from './add-watcher';
-import removeWatcherRouter from './remove-watcher';
-import WatcherCenter from './watcher';
+async function startApp() {
+  logger.info('starting the application...');
+  const randomPort = await (() => {
+    return new Promise<number>(async (resolve) => {
+      for (let port = 3000; port <= 5000; port++) {
+        if (await isFreePort(port)) {
+          return resolve(port);
+        }
+      }
+    });
+  })();
 
-const PORT = process.env.PORT || 3000;
-const app = express();
+  const PORT = parseInt(process.env.PORT as string, 10) || randomPort;
+  return new Promise<http.Server>((resolve) => {
+    const app = express();
+    const server = http.createServer(app);
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, '../public')));
-app.use(addWatcherRouter);
-app.use(removeWatcherRouter);
+    app.use(express.json());
+    app.use(express.static(path.join(__dirname, '../public')));
 
-export const watcher = new WatcherCenter();
-
-app.get('/data', (req, res) => {
-  res.json({ watchedFolders: watcher.watchedFolders });
-});
-
-fp(PORT, '127.0.0.1', function (err: unknown, freePort: number) {
-  app.listen(freePort, () => {
-    console.log(
-      'server is running on port `http://localhost:' + freePort + '`.',
-    );
-    watcher.start();
+    server.listen(PORT, () => {
+      console.log('server is running on host `http://localhost:' + PORT + '`.');
+      logger.info('the application started successfully.');
+      resolve(server);
+    });
   });
-});
+}
+
+export default startApp;

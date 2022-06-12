@@ -1,185 +1,119 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import chokidar from 'chokidar';
-import { WindowsBalloon } from 'node-notifier';
-import File from './File';
+import chokidar, { FSWatcher } from 'chokidar';
+import logger from './logger';
+import { EventEmitter } from 'events';
 
-const Notifier = new WindowsBalloon();
-
-interface Options {
-  parentFolder: string;
-  openFolder: boolean;
+export interface WatcherPromise {
+  onAddDir: (notify: (addedFolderPath: string) => void) => void;
+  close: () => void;
 }
 
-interface Watcher {
+interface WatchPayload {
   folderPath: string;
-  message: string;
-  createdAt: Date;
-  options: Options;
-  watcher: ReturnType<typeof chokidar.watch>;
+  notificationMsg: string;
 }
 
-class WatcherCenter {
-  private watchers: Array<Omit<Watcher, 'options'>>;
-  private file: File;
-  private optionsMap: Map<string, Options>;
+const watcherOptions: chokidar.WatchOptions = {
+  depth: 0,
+  persistent: true,
+  followSymlinks: true,
+  awaitWriteFinish: true,
+  useFsEvents: true,
+  usePolling: true,
+  interval: 100,
+};
 
-  constructor() {
-    this.watchers = [];
-    const dbPath = path.join(__dirname, 'watchedFolders.json');
-    this.file = new File(dbPath);
+export default class Watcher extends EventEmitter {
+  private parentWatcher?: FSWatcher;
+  private watcher?: FSWatcher;
+  private dirs: Array<string> = [];
 
-    this.optionsMap = new Map();
-    const __db: Array<Omit<Watcher, 'watcher'>> = JSON.parse(
-      this.file.content,
-    ).db;
-
-    __db.forEach(({ options, folderPath }) => {
-      this.addOptions(folderPath, options);
-    });
+  constructor(
+    private watchPayload: WatchPayload,
+    private beforeStart: () => Promise<void>,
+    private beforeClose: () => Promise<void>,
+  ) {
+    super();
+    if (fs.existsSync(this.watchPayload.folderPath)) {
+      this.dirs = fs.readdirSync(this.watchPayload.folderPath);
+    }
   }
 
-  start() {
-    const watchedFolders: Omit<Watcher, 'watcher'>[] = JSON.parse(
-      this.file.content,
-    ).db;
+  init() {
+    const self = this;
+    return new Promise<WatcherPromise>(async (resolve, reject) => {
+      try {
+        await this.beforeStart();
+        logger.info('start watching the folder.');
+        self.watcher = chokidar.watch(
+          self.watchPayload.folderPath,
+          watcherOptions,
+        );
+        self.parentWatcher = chokidar.watch(
+          path.dirname(self.watchPayload.folderPath),
+          watcherOptions,
+        );
 
-    watchedFolders.forEach((folder) => {
-      const createdWatcher = this.add(
-        folder.folderPath,
-        folder.message,
-        folder.options,
-      );
+        logger.info('start listening to remove directory event.');
+        self.onRemove();
 
-      let oldFolderPaths = fs
-        .readdirSync(folder.folderPath)
-        .map((dir) => path.join(folder.folderPath, dir));
-
-      createdWatcher.on('addDir', async (folderPath) => {
-        if (!oldFolderPaths.includes(folderPath)) {
-          Notifier.notify(
-            {
-              message: folder.message,
-              title: folderPath.split('\\').reverse()[0],
-              type: 'warn',
-              wait: true,
-              sound: true,
-            },
-            (...args: unknown[]) => {
-              const actionType = args[1];
-              const __array = folderPath.split('\\');
-              const parentFolder = __array
-                .slice(0, __array.length - 1)
-                .join('\\');
-
-              const options = this.getOptions(parentFolder);
-              if (
-                actionType === 'activate' &&
-                options.openFolder &&
-                folderPath.includes(parentFolder)
-              ) {
-                require('child_process').exec(`start "" "${folderPath}"`);
-              }
-            },
-          );
-          oldFolderPaths.push(folderPath);
-        }
-      });
-
-      createdWatcher.on('unlinkDir', async (folderPath) => {
-        oldFolderPaths = oldFolderPaths.filter((path) => folderPath !== path);
-      });
-    });
-  }
-
-  addOptions(folderPath: string, options: Options) {
-    this.optionsMap.set(folderPath, { ...options, parentFolder: folderPath });
-  }
-
-  removeOptions(folderPath: string) {
-    this.optionsMap.delete(folderPath);
-  }
-
-  getOptions(folderPath: string) {
-    return (
-      this.optionsMap.get(folderPath) || {
-        openFolder: false,
-        parentFolder: '',
+        self.watcher.on('ready', function onReady() {
+          logger.info('the folder is successfully watched.');
+          self.emit('watched');
+          resolve({
+            onAddDir: self.onAddDir.bind(self),
+            close: self.close.bind(self),
+          });
+        });
+      } catch (err) {
+        this.emit('error', err);
       }
-    );
+    });
   }
 
-  add(folderPath: string, message: string, options: Options) {
-    const watcher = chokidar.watch(folderPath, {
-      persistent: true,
-      depth: 0,
+  private isValidToNotify(givenPath: string) {
+    if (path.resolve(this.watchPayload.folderPath) === path.resolve(givenPath))
+      return false;
+    const name = path.basename(givenPath);
+    return !this.dirs.includes(name);
+  }
+
+  private onAddDir(notify: (addedFolderPath: string) => void) {
+    this.watcher!.on('addDir', (addedFolderPath: string) => {
+      if (this.isValidToNotify(addedFolderPath)) {
+        logger.info('new folder is added.', { folderPath: addedFolderPath });
+        notify(addedFolderPath);
+      }
+    });
+  }
+
+  private onRemove() {
+    this.watcher!.on('unlinkDir', (addedFolderPath: string) => {
+      const name = path.basename(addedFolderPath);
+      this.dirs = this.dirs.filter((dir) => dir !== name);
     });
 
-    if (this.includes(folderPath)) this.get(folderPath)!;
+    this.parentWatcher!.on('unlinkDir', (addedFolderPath: string) => {
+      if (addedFolderPath === this.watchPayload.folderPath) {
+        this.close();
+      }
+    });
+  }
 
-    const __watcher = {
-      folderPath,
-      message,
-      watcher,
-      createdAt: new Date(),
-    };
+  private async close() {
+    logger.info('closing the watcher.');
+    try {
+      await this.beforeClose();
 
-    this.watchers = [__watcher, ...this.watchers];
+      await this.watcher!.unwatch(this.watchPayload.folderPath).close();
 
-    let watchedFolders: Omit<Watcher, 'watcher'>[] = JSON.parse(
-      this.file.content,
-    ).db;
+      await this.parentWatcher!.close();
 
-    if (!watchedFolders.some((folder) => folder.folderPath === folderPath)) {
-      this.addOptions(folderPath, options);
-      watchedFolders = [
-        {
-          folderPath,
-          message,
-          createdAt: __watcher.createdAt,
-          options: { ...options, parentFolder: folderPath },
-        },
-        ...watchedFolders,
-      ];
-      this.file.content = JSON.stringify({ db: watchedFolders });
+      logger.info('the watcher closed successfully.');
+      this.emit('unwatched');
+    } catch (error) {
+      this.emit('error', error);
     }
-
-    return watcher;
-  }
-
-  remove(folderPath: string) {
-    const watcher = this.get(folderPath);
-    this.removeOptions(folderPath);
-
-    if (watcher) {
-      watcher.unwatch(folderPath);
-      this.watchers = this.watchers.filter(
-        (watcher) => watcher.folderPath !== folderPath,
-      );
-
-      let watchedFolders: Omit<Watcher, 'watcher'>[] = JSON.parse(
-        this.file.content,
-      ).db;
-
-      watchedFolders = watchedFolders.filter(
-        (folder) => folder.folderPath !== folderPath,
-      );
-      this.file.content = JSON.stringify({ db: watchedFolders });
-    }
-  }
-
-  includes(folderPath: string) {
-    return this.watchers.some((watcher) => watcher.folderPath === folderPath);
-  }
-
-  get(folderPath: string) {
-    return this.watchers.find((watcher) => watcher.folderPath === folderPath)
-      ?.watcher;
-  }
-
-  get watchedFolders() {
-    return this.watchers.map(({ watcher, ...__watcher }) => __watcher);
   }
 }
-
-export default WatcherCenter;
